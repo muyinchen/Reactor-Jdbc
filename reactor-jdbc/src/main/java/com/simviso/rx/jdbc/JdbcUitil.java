@@ -46,4 +46,26 @@ public class JdbcUitil {
         }
 
     }
+
+    public static void closeAll(Statement stmt) {
+        try {
+            stmt.close();
+        } catch (SQLException e) {
+            // ignore
+        }
+        Connection con = null;
+        try {
+            con = stmt.getConnection();
+        } catch (SQLException e1) {
+            // ignore
+        }
+        if (con != null) {
+            try {
+                con.close();
+            } catch (SQLException e) {
+                // ignore
+            }
+        }
+    }
+
 }

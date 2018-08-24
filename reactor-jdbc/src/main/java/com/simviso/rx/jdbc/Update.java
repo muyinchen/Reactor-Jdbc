@@ -17,7 +17,7 @@ import java.util.function.Function;
  * @time Created by Auser on 2018/8/24 21:29.
  */
 public class Update {
-    public static Mono<Integer> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql){
+    public static Mono<Integer> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql) {
         Callable<PreparedStatement> resourceFactory = () -> {
             Connection con = connectionFactory.call();
             return con.prepareStatement(sql);
@@ -29,13 +29,7 @@ public class Update {
                 return Mono.error(e);
             }
         };
-        Consumer<PreparedStatement> disposer = p -> {
-            try {
-                p.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        };
+        Consumer<PreparedStatement> disposer = JdbcUitil::closeAll;
         return Mono.using(resourceFactory, singleFactory, disposer);
     }
 
@@ -47,13 +41,7 @@ public class Update {
             return con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
         };
         Function<PreparedStatement, Flux<T>> singleFactory = ps -> create(ps, mapper);
-        Consumer<PreparedStatement> disposer = preparedStatement -> {
-            try {
-                preparedStatement.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        };
+        Consumer<PreparedStatement> disposer = JdbcUitil::closeAll;
         return Flux.using(resourceFactory, singleFactory, disposer);
     }
 
@@ -62,7 +50,7 @@ public class Update {
             ps.execute();
             return ps.getGeneratedKeys();
         };
-        BiFunction<ResultSet, SynchronousSink<T>,ResultSet> generator = (rs, sink) -> {
+        BiFunction<ResultSet, SynchronousSink<T>, ResultSet> generator = (rs, sink) -> {
             try {
                 if (rs.next()) {
                     sink.next(mapper.apply(rs));
@@ -70,16 +58,11 @@ public class Update {
                     sink.complete();
                 }
             } catch (SQLException e) {
-               sink.error(e);
+                sink.error(e);
             }
             return rs;
         };
-        Consumer<ResultSet> disposer = rs -> {
-            try {
-                rs.close();
-            } catch (SQLException ignored) {
-            }
-        };
+        Consumer<ResultSet> disposer = JdbcUitil::closeSilently;
         return Flux.generate(initialState, generator, disposer);
     }
 }
