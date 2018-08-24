@@ -19,7 +19,6 @@
 
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <rxjava.version>2.1.16</rxjava.version>
         <checkstyle.version>2.17</checkstyle.version>
         <findbugs.version>3.0.5</findbugs.version>
         <javadoc.version>3.0.0</javadoc.version>
