@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.github.simviso</groupId>
+    <artifactId>reactor-jdbc-parent</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <modules>
+        <module>reactor-jdbc</module>
+        <module>reactor-pool</module>
+    </modules>
+    <packaging>pom</packaging>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <rxjava.version>2.1.16</rxjava.version>
+        <checkstyle.version>2.17</checkstyle.version>
+        <findbugs.version>3.0.5</findbugs.version>
+        <javadoc.version>3.0.0</javadoc.version>
+        <pmd.version>3.8</pmd.version>
+        <jdepend.version>2.0</jdepend.version>
+        <javancss.version>2.1</javancss.version>
+        <project.info.version>2.9</project.info.version>
+        <jxr.version>2.5</jxr.version>
+        <taglist.version>2.4</taglist.version>
+        <m3.site.version>3.6</m3.site.version>
+        <changelog.version>2.2</changelog.version>
+        <coverage.reports.dir>${project.build.directory}/target/coverage-reports</coverage.reports.dir>
+        <slf4j.version>1.7.21</slf4j.version>
+        <jmh.version>1.19</jmh.version>
+        <junit.version>4.12</junit.version>
+        <derby.version>10.14.1.0</derby.version>
+        <jar.plugin.version>3.0.2</jar.plugin.version>
+        <!--<nexus.staging.plugin.version>1.6.6</nexus.staging.plugin.version>-->
+    </properties>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+            <comments>A business-friendly OSS license</comments>
+        </license>
+    </licenses>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.projectreactor</groupId>
+                <artifactId>reactor-bom</artifactId>
+                <version>LATEST</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
