@@ -26,7 +26,7 @@ public class Update {
             try {
                 return Mono.just(ps.executeUpdate());
             } catch (SQLException e) {
-                return Mono.error(e);
+                throw new RuntimeException(e);
             }
         };
         Consumer<PreparedStatement> disposer = JdbcUitil::closeAll;
@@ -58,7 +58,7 @@ public class Update {
                     sink.complete();
                 }
             } catch (SQLException e) {
-                sink.error(e);
+                throw new RuntimeException(e);
             }
             return rs;
         };

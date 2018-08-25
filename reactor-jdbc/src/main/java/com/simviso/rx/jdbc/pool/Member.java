@@ -1,5 +1,7 @@
 package com.simviso.rx.jdbc.pool;
 
+import reactor.core.publisher.ReplayProcessor;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -12,11 +14,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @time  2018/8/25 11:01.
  */
 public class Member<T> {
-     final T value;
+    final T value;
     private final AtomicBoolean inUse = new AtomicBoolean(false);
+    private final ReplayProcessor<Member<T>> replayProcessor;
 
-    public Member(T value) {
+    public Member(T value,ReplayProcessor<Member<T>> replayProcessor) {
         this.value = value;
+        this.replayProcessor=replayProcessor;
     }
 
     public boolean checkout() {
@@ -25,6 +29,7 @@ public class Member<T> {
 
     public void checkin() {
         inUse.set(false);
+        replayProcessor.onNext(this);
     }
 
 }

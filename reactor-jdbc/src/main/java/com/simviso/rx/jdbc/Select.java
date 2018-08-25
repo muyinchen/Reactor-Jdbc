@@ -35,7 +35,7 @@ public class Select {
                     sink.complete();
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
 
             return rs;
