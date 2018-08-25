@@ -14,9 +14,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * @author Author  知秋
+ * @author ZhiQiu
  * @email fei6751803@163.com
- * @time Created by Auser on 2018/8/24 22:01.
+ * @time  2018/8/24 22:01.
  */
 public class Select {
     public static <T> Flux<T> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql,

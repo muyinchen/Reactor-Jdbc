@@ -6,9 +6,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * @author Author  知秋
+ * @author ZhiQiu
  * @email fei6751803@163.com
- * @time Created by Auser on 2018/8/24 21:59.
+ * @time  2018/8/24 21:59.
  */
 public class JdbcUitil {
 
