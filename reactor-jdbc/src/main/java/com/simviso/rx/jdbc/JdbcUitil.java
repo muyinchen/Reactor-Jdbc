@@ -1,9 +1,7 @@
 package com.simviso.rx.jdbc;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.List;
 
 /**
  * @author ZhiQiu
@@ -68,4 +66,8 @@ public class JdbcUitil {
         }
     }
 
+    static PreparedStatement setParameters(PreparedStatement ps, List<Object> parameters) {
+        //TODO
+        return ps;
+    }
 }

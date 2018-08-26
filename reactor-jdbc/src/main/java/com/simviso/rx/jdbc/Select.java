@@ -4,7 +4,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.SynchronousSink;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -47,30 +46,31 @@ public class Select {
 
     public static <T> Flux<T> create(Flux<Connection> connections, List<Object> parameters, String sql,
                                          Function<? super ResultSet, T> mapper) {
-        return Flux.just(connections.blockFirst())
-                   .flatMap(con -> {
-                       Callable<ResultSet> initialState = () -> {
-                           PreparedStatement ps = con.prepareStatement(sql);
-                           // TODO set parameters
-                           return ps.executeQuery();
-                       };
-                       BiFunction<ResultSet, SynchronousSink<T>,ResultSet> generator = (rs, sink) ->
-                       {
-                           try {
-                               if (rs.next()) {
-                                   sink.next(mapper.apply(rs));
-                               } else {
-                                   sink.complete();
-                               }
-                           } catch (SQLException e) {
-                               throw new RuntimeException(e);
-                           }
-
-                           return rs;
-                       };
-                       Consumer<ResultSet> disposeState =JdbcUitil::closeSilently;
-                       return Flux.generate(initialState, generator, disposeState);
-                   });
+        return (Flux<T>) create(connections.blockFirst(),sql,parameters,mapper);
     }
+
+
+    private static <T> Flux<? extends T> create(Connection con, String sql, List<Object> parameters,
+                                                    Function<? super ResultSet, T> mapper) {
+        Callable<ResultSet> initialState = () -> JdbcUitil.setParameters(con.prepareStatement(sql), parameters)
+                                                     .getResultSet();
+        BiFunction<ResultSet, SynchronousSink<T>,ResultSet> generator = (rs, sink) ->
+        {
+            try {
+                if (rs.next()) {
+                    sink.next(mapper.apply(rs));
+                } else {
+                    sink.complete();
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+
+            return rs;
+        };
+        Consumer<ResultSet> disposeState = JdbcUitil::closeSilently;
+        return Flux.generate(initialState, generator, disposeState);
+    }
+
 
 }
