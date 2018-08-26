@@ -14,10 +14,27 @@ import java.util.function.Function;
 /**
  * @author ZhiQiu
  * @email fei6751803@163.com
- * @time  2018/8/24 21:29.
+ * @time 2018/8/24 21:29.
  */
 public class Update {
-    public static Mono<Integer> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql) {
+    public static Mono<Integer> create(Flux<Connection> connections, List<Object> parameters, String sql) {
+
+        Connection connection = connections.blockFirst();
+
+        return Mono.using(
+                () -> JdbcUtil.setParameters(connection.prepareStatement(sql), parameters),
+                ps -> {
+                    try {
+                        return Mono.just(ps.executeUpdate());
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                },
+                JdbcUtil::closeAll);
+    }
+
+
+    /*public static Mono<Integer> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql) {
         Callable<PreparedStatement> resourceFactory = () -> {
             Connection con = connectionFactory.call();
             return con.prepareStatement(sql);
@@ -29,19 +46,18 @@ public class Update {
                 throw new RuntimeException(e);
             }
         };
-        Consumer<PreparedStatement> disposer = JdbcUitil::closeAll;
+        Consumer<PreparedStatement> disposer = JdbcUtil::closeAll;
         return Mono.using(resourceFactory, singleFactory, disposer);
-    }
+    }*/
 
     public static <T> Flux<T> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql,
                                      Function<? super ResultSet, T> mapper) {
         Callable<PreparedStatement> resourceFactory = () -> {
             Connection con = connectionFactory.call();
-            // TODO set parameters
-            return con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            return JdbcUtil.setParameters(con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS),parameters);
         };
         Function<PreparedStatement, Flux<T>> singleFactory = ps -> create(ps, mapper);
-        Consumer<PreparedStatement> disposer = JdbcUitil::closeAll;
+        Consumer<PreparedStatement> disposer = JdbcUtil::closeAll;
         return Flux.using(resourceFactory, singleFactory, disposer);
     }
 
@@ -62,7 +78,7 @@ public class Update {
             }
             return rs;
         };
-        Consumer<ResultSet> disposer = JdbcUitil::closeSilently;
+        Consumer<ResultSet> disposer = JdbcUtil::closeSilently;
         return Flux.generate(initialState, generator, disposer);
     }
 }

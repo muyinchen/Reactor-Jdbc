@@ -40,7 +40,7 @@ public class Select {
             return rs;
         };
 
-        Consumer<ResultSet> disposeState = JdbcUitil::closeSilently;
+        Consumer<ResultSet> disposeState = JdbcUtil::closeSilently;
         return Flux.generate(initialState,generator,disposeState);
     }*/
 
@@ -52,8 +52,8 @@ public class Select {
 
     private static <T> Flux<? extends T> create(Connection con, String sql, List<Object> parameters,
                                                     Function<? super ResultSet, T> mapper) {
-        Callable<ResultSet> initialState = () -> JdbcUitil.setParameters(con.prepareStatement(sql), parameters)
-                                                     .getResultSet();
+        Callable<ResultSet> initialState = () -> JdbcUtil.setParameters(con.prepareStatement(sql), parameters)
+                                                         .getResultSet();
         BiFunction<ResultSet, SynchronousSink<T>,ResultSet> generator = (rs, sink) ->
         {
             try {
@@ -68,7 +68,7 @@ public class Select {
 
             return rs;
         };
-        Consumer<ResultSet> disposeState = JdbcUitil::closeSilently;
+        Consumer<ResultSet> disposeState = JdbcUtil::closeSilently;
         return Flux.generate(initialState, generator, disposeState);
     }
 

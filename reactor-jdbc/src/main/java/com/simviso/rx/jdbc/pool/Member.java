@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @time  2018/8/25 11:01.
  */
 public class Member<T> {
-    final T value;
+    private final T value;
     private final AtomicBoolean inUse = new AtomicBoolean(false);
     private final ReplayProcessor<Member<T>> replayProcessor;
 
@@ -32,4 +32,7 @@ public class Member<T> {
         replayProcessor.onNext(this);
     }
 
+    public T getValue() {
+        return value;
+    }
 }

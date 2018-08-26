@@ -8,7 +8,7 @@ import java.util.List;
  * @email fei6751803@163.com
  * @time  2018/8/24 21:59.
  */
-public class JdbcUitil {
+public class JdbcUtil {
 
     public static void closeSilently(ResultSet rs) {
         Statement stmt = null;
