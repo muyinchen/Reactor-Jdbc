@@ -16,10 +16,10 @@ import java.util.function.Function;
 /**
  * @author ZhiQiu
  * @email fei6751803@163.com
- * @time  2018/8/24 22:01.
+ * @time 2018/8/24 22:01.
  */
 public class Select {
-    public static <T> Flux<T> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql,
+   /* public static <T> Flux<T> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql,
                                      Function<? super ResultSet, T> mapper){
         Callable<ResultSet> initialState = () -> {
             Connection con = connectionFactory.call();
@@ -43,5 +43,34 @@ public class Select {
 
         Consumer<ResultSet> disposeState = JdbcUitil::closeSilently;
         return Flux.generate(initialState,generator,disposeState);
+    }*/
+
+    public static <T> Flux<T> create(Flux<Connection> connections, List<Object> parameters, String sql,
+                                         Function<? super ResultSet, T> mapper) {
+        return Flux.just(connections.blockFirst())
+                   .flatMap(con -> {
+                       Callable<ResultSet> initialState = () -> {
+                           PreparedStatement ps = con.prepareStatement(sql);
+                           // TODO set parameters
+                           return ps.executeQuery();
+                       };
+                       BiFunction<ResultSet, SynchronousSink<T>,ResultSet> generator = (rs, sink) ->
+                       {
+                           try {
+                               if (rs.next()) {
+                                   sink.next(mapper.apply(rs));
+                               } else {
+                                   sink.complete();
+                               }
+                           } catch (SQLException e) {
+                               throw new RuntimeException(e);
+                           }
+
+                           return rs;
+                       };
+                       Consumer<ResultSet> disposeState =JdbcUitil::closeSilently;
+                       return Flux.generate(initialState, generator, disposeState);
+                   });
     }
+
 }
