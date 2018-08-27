@@ -21,6 +21,12 @@ public class Update {
 
         Connection connection = connections.blockFirst();
 
+        return create(connection,parameters,sql);
+    }
+
+    public static Mono<Integer> create(Connection connection, List<Object> parameters, String sql) {
+
+
         return Mono.using(
                 () -> JdbcUtil.setParameters(connection.prepareStatement(sql), parameters),
                 ps -> {
@@ -32,7 +38,6 @@ public class Update {
                 },
                 JdbcUtil::closeAll);
     }
-
 
     /*public static Mono<Integer> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql) {
         Callable<PreparedStatement> resourceFactory = () -> {
@@ -50,12 +55,10 @@ public class Update {
         return Mono.using(resourceFactory, singleFactory, disposer);
     }*/
 
-    public static <T> Flux<T> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql,
+    public static <T> Flux<T> createReturnGeneratedKeys(Flux<Connection> connections, List<Object> parameters, String sql,
                                      Function<? super ResultSet, T> mapper) {
-        Callable<PreparedStatement> resourceFactory = () -> {
-            Connection con = connectionFactory.call();
-            return JdbcUtil.setParameters(con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS),parameters);
-        };
+        Connection con = connections.blockFirst();
+        Callable<? extends PreparedStatement> resourceFactory = () -> JdbcUtil.setParameters(con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS),parameters);
         Function<PreparedStatement, Flux<T>> singleFactory = ps -> create(ps, mapper);
         Consumer<PreparedStatement> disposer = JdbcUtil::closeAll;
         return Flux.using(resourceFactory, singleFactory, disposer);
