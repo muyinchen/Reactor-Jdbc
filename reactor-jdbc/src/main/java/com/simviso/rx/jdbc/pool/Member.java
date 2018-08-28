@@ -35,4 +35,13 @@ public class Member<T> {
     public T getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return "Member [value=" +
+                value +
+                ", inUse=" +
+                inUse +
+                "]";
+    }
 }

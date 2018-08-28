@@ -30,14 +30,16 @@ public class Pool<T> {
         Flux.range(1, maxSize)
             .map(n -> {
                 try {
-                    return new Member<T>(factory.call(), processor);
+                    return new Member<>(factory.call(), processor);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }).subscribe(processor);
         //When the element is issued, the status in this element is set to used.
         //元素下发的时候将此元素内的状态设定为已使用
-        this.members = processor.filter(Member::checkout);
+        this.members = processor.doOnNext(m -> System.out.println("To be checked: " + m))
+                                .filter(Member::checkout)
+                                .doOnNext(m -> System.out.println("checked out: " + m));
     }
 
     public Flux<Member<T>> members() {
