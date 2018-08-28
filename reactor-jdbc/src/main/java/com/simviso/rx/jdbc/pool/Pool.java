@@ -4,6 +4,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.ReplayProcessor;
 
 import java.util.concurrent.Callable;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Through a factory to obtain objects, packaged into pool objects for management,
@@ -24,21 +26,16 @@ public class Pool<T> {
     private final Flux<Member<T>> members;
 
 
-    public Pool(Callable<T> factory, int maxSize) {
+    public Pool(Callable<T> factory, Predicate<T> healthy, Consumer<T> disposer, int maxSize, long retryDelayMs) {
         ReplayProcessor<Member<T>> processor = ReplayProcessor.create();
 
         Flux.range(1, maxSize)
-            .map(n -> {
-                try {
-                    return new Member<>(factory.call(), processor);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }).subscribe(processor);
+            .map(n -> new Member<T>(processor, factory, retryDelayMs, healthy, disposer))
+            .subscribe(processor);
         //When the element is issued, the status in this element is set to used.
         //元素下发的时候将此元素内的状态设定为已使用
         this.members = processor.doOnNext(m -> System.out.println("To be checked: " + m))
-                                .filter(Member::checkout)
+                                .flatMap(Member::checkout)
                                 .doOnNext(m -> System.out.println("checked out: " + m));
     }
 
