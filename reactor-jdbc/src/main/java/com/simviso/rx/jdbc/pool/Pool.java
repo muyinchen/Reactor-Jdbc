@@ -2,6 +2,7 @@ package com.simviso.rx.jdbc.pool;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.ReplayProcessor;
+import reactor.util.concurrent.Queues;
 
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -30,12 +31,12 @@ public class Pool<T> {
         ReplayProcessor<Member<T>> processor = ReplayProcessor.create();
 
         Flux.range(1, maxSize)
-            .map(n -> new Member<T>(processor, factory, retryDelayMs, healthy, disposer))
+            .map(n -> new Member<>(processor, factory, retryDelayMs, healthy, disposer))
             .subscribe(processor);
         //When the element is issued, the status in this element is set to used.
         //元素下发的时候将此元素内的状态设定为已使用
         this.members = processor.doOnNext(m -> System.out.println("To be checked: " + m))
-                                .flatMap(Member::checkout)
+                                .flatMapDelayError(Member::checkout,1,Queues.XS_BUFFER_SIZE)
                                 .doOnNext(m -> System.out.println("checked out: " + m));
     }
 

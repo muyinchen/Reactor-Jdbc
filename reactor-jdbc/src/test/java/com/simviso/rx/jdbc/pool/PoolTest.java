@@ -15,7 +15,7 @@ public class PoolTest {
     public void test() throws InterruptedException {
         AtomicInteger count = new AtomicInteger();
         Pool<Integer> pool = new Pool<>(count::incrementAndGet, n -> true, n -> {
-        }, 3, 1000);
+        }, 5, 1000);
         pool.members().toStream().forEach(System.out::println);
     }
 }
