@@ -17,26 +17,33 @@ import java.util.function.Function;
  * @time 2018/8/24 21:29.
  */
 public class Update {
-    public static Mono<Integer> create(Flux<Connection> connections, List<Object> parameters, String sql) {
+    public static Flux<Integer> create(Flux<Connection> connections, Flux<List<Object>> parameterGroups, String sql) {
 
         Connection connection = connections.blockFirst();
 
-        return create(connection,parameters,sql);
+        return create(connection,parameterGroups,sql);
     }
 
-    public static Mono<Integer> create(Connection connection, List<Object> parameters, String sql) {
+    public static Flux<Integer> create(Connection connection, Flux<List<Object>> parameterGroups, String sql) {
+        Callable<PreparedStatement> resourceFactory = () -> connection.prepareStatement(sql);
+        Function<PreparedStatement, Flux<Integer>> observableFactory = ps -> parameterGroups
+                .flatMap(parameters -> create(ps, parameters).flux());
+        Consumer<PreparedStatement> disposer = ps -> {
+            try {
+                ps.close();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        };
 
-
-        return Mono.using(
-                () -> JdbcUtil.setParameters(connection.prepareStatement(sql), parameters),
-                ps -> {
-                    try {
-                        return Mono.just(ps.executeUpdate());
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
-                },
-                JdbcUtil::closeAll);
+        return Flux.using(
+                resourceFactory,
+                observableFactory,
+                disposer);
+    }
+    private static Mono<Integer> create(PreparedStatement ps, List<Object> parameters) {
+        JdbcUtil.setParameters(ps, parameters);
+        return Mono.fromCallable(ps::executeUpdate);
     }
 
     /*public static Mono<Integer> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql) {
@@ -81,7 +88,13 @@ public class Update {
             }
             return rs;
         };
-        Consumer<ResultSet> disposer = JdbcUtil::closeSilently;
+        Consumer<ResultSet> disposer =  rs -> {
+            try {
+                rs.close();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        };
         return Flux.generate(initialState, generator, disposer);
     }
 }
