@@ -42,8 +42,11 @@ public class Update {
                 disposer);
     }
     private static Mono<Integer> create(PreparedStatement ps, List<Object> parameters) {
-        JdbcUtil.setParameters(ps, parameters);
-        return Mono.fromCallable(ps::executeUpdate);
+
+        return Mono.fromCallable(() ->{
+            JdbcUtil.setParameters(ps, parameters);
+            return ps.executeUpdate();
+        });
     }
 
     /*public static Mono<Integer> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql) {
