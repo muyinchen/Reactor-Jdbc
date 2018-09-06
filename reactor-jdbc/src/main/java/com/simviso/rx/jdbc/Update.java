@@ -16,7 +16,7 @@ import java.util.function.Function;
  * @email fei6751803@163.com
  * @time 2018/8/24 21:29.
  */
-public class Update {
+public final class Update {
     public static Flux<Integer> create(Flux<Connection> connections, Flux<List<Object>> parameterGroups, String sql) {
 
         Connection connection = connections.blockFirst();
@@ -65,17 +65,19 @@ public class Update {
         return Mono.using(resourceFactory, singleFactory, disposer);
     }*/
 
-    public static <T> Flux<T> createReturnGeneratedKeys(Flux<Connection> connections, List<Object> parameters, String sql,
+    public static <T> Flux<T> createReturnGeneratedKeys(Flux<Connection> connections, Flux<List<Object>> parameterGroups, String sql,
                                      Function<? super ResultSet, T> mapper) {
         Connection con = connections.blockFirst();
-        Callable<? extends PreparedStatement> resourceFactory = () -> JdbcUtil.setParameters(con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS),parameters);
-        Function<PreparedStatement, Flux<T>> singleFactory = ps -> create(ps, mapper);
+        Callable<? extends PreparedStatement> resourceFactory =
+                () -> con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        Function<PreparedStatement, Flux<T>> singleFactory = ps -> parameterGroups.flatMap(parameters ->create(ps, parameters, mapper));
         Consumer<PreparedStatement> disposer = JdbcUtil::closeAll;
         return Flux.using(resourceFactory, singleFactory, disposer);
     }
 
-    private static <T> Flux<T> create(PreparedStatement ps, Function<? super ResultSet, T> mapper) {
+    private static <T> Flux<T> create(PreparedStatement ps, List<Object> parameters, Function<? super ResultSet, T> mapper) {
         Callable<ResultSet> initialState = () -> {
+            JdbcUtil.setParameters(ps, parameters);
             ps.execute();
             return ps.getGeneratedKeys();
         };
