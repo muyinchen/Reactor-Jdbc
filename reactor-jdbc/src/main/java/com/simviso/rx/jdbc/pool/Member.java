@@ -11,13 +11,13 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
- *The setting of the object in the pool, through a Boolean atom class
+ * The setting of the object in the pool, through a Boolean atom class
  * to manage the concurrent use state
- *池中对象的设定，通过一个布尔原子类来管理并发下的使用状态
+ * 池中对象的设定，通过一个布尔原子类来管理并发下的使用状态
  *
  * @author ZhiQiu
  * @email fei6751803@163.com
- * @time  2018/8/25 11:01.
+ * @time 2018/8/25 11:01.
  */
 public class Member<T> {
     private static final int NOT_INITIALIZED_NOT_IN_USE = 0;
@@ -33,8 +33,6 @@ public class Member<T> {
     private final Consumer<T> disposer;
 
 
-
-
     public Member(ReplayProcessor<Member<T>> replayProcessor, Callable<T> factory, long retryDelayMs, Predicate<T> healthy, Consumer<T> disposer) {
 
         this.processor = replayProcessor;
@@ -45,42 +43,41 @@ public class Member<T> {
     }
 
 
-
     public Mono<Member<T>> checkout() {
         return Mono.defer(() -> {
             if (state.compareAndSet(NOT_INITIALIZED_NOT_IN_USE, INITIALIZED_IN_USE)) {
                 try {
                     value = factory.call();
                 } catch (Exception e) {
-                    throw  new RuntimeException(e);
+                    throw new RuntimeException(e);
                 }
                 return Mono.just(Member.this);
-            } else {
+            } else if (state.compareAndSet(INITIALIZED_NOT_IN_USE, INITIALIZED_IN_USE)) {
                 try {
                     if (healthy.test(value)) {
-                        if (state.compareAndSet(INITIALIZED_NOT_IN_USE, INITIALIZED_IN_USE)) {
-                            return Mono.just(Member.this);
-                        } else {
-                            return Mono.empty();
-                        }
+
+                        return Mono.just(Member.this);
                     } else {
-                       return dispose();
+                        return Mono.empty();
                     }
                 } catch (Throwable e) {
-                   return dispose();
+                    return dispose();
                 }
+            } else {
+                return Mono.empty();
             }
+
         }).retryWhen(e -> e.timeout(Duration.ofMillis(retryDelayMs)));
     }
 
     private Mono<? extends Member<T>> dispose() {
         try {
             disposer.accept(value);
-            state.set(NOT_INITIALIZED_NOT_IN_USE);
-            return Mono.empty();
         } catch (Throwable t) {
             return Mono.error(new DisposerHoldException(t));
         }
+        state.set(NOT_INITIALIZED_NOT_IN_USE);
+        return Mono.empty();
     }
 
     public void checkin() {
