@@ -3,6 +3,7 @@ package com.simviso.rx.jdbc;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SynchronousSink;
+import reactor.util.concurrent.Queues;
 
 import java.sql.*;
 import java.util.List;
@@ -70,7 +71,7 @@ public final class Update {
         Connection con = connections.blockFirst();
         Callable<? extends PreparedStatement> resourceFactory =
                 () -> con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-        Function<PreparedStatement, Flux<T>> singleFactory = ps -> parameterGroups.flatMap(parameters ->create(ps, parameters, mapper));
+        Function<PreparedStatement, Flux<T>> singleFactory = ps -> parameterGroups.flatMapDelayError(parameters ->create(ps, parameters, mapper),1,Queues.XS_BUFFER_SIZE);
         Consumer<PreparedStatement> disposer = JdbcUtil::closeAll;
         return Flux.using(resourceFactory, singleFactory, disposer);
     }
