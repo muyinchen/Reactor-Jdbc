@@ -46,9 +46,13 @@ public final class Select {
         return Flux.generate(initialState,generator,disposeState);
     }*/
 
+    private Select() {
+        //prevent instantiation
+    }
+
     public static <T> Flux<T> create(Flux<Connection> connections,  Flux<List<Object>> parameters, String sql,
                                          Function<? super ResultSet, T> mapper) {
-        return (Flux<T>) create(connections.blockFirst(),sql,parameters,mapper);
+        return create(connections.blockFirst(),sql,parameters,mapper);
     }
 
 

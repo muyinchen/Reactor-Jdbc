@@ -18,11 +18,14 @@ import java.util.function.Function;
  * @time 2018/8/24 21:29.
  */
 public final class Update {
+
+    private Update() {
+        //prevent instantiation
+    }
+
     public static Flux<Integer> create(Flux<Connection> connections, Flux<List<Object>> parameterGroups, String sql) {
 
-        Connection connection = connections.blockFirst();
-
-        return create(connection,parameterGroups,sql);
+        return create(connections.blockFirst(),parameterGroups,sql);
     }
 
     public static Flux<Integer> create(Connection connection, Flux<List<Object>> parameterGroups, String sql) {
