@@ -1,5 +1,6 @@
 package com.simviso.rx.jdbc.pool;
 
+import com.simviso.rx.jdbc.exception.DisposerHoldException;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
 
@@ -33,6 +34,7 @@ public class Member<T> {
 
 
 
+
     public Member(ReplayProcessor<Member<T>> replayProcessor, Callable<T> factory, long retryDelayMs, Predicate<T> healthy, Consumer<T> disposer) {
 
         this.processor = replayProcessor;
@@ -62,15 +64,23 @@ public class Member<T> {
                             return Mono.empty();
                         }
                     } else {
-                        return Mono.empty();
+                       return dispose();
                     }
                 } catch (Throwable e) {
-                    disposer.accept(value);
-                    state.set(NOT_INITIALIZED_NOT_IN_USE);
-                    return Mono.empty();
+                   return dispose();
                 }
             }
         }).retryWhen(e -> e.timeout(Duration.ofMillis(retryDelayMs)));
+    }
+
+    private Mono<? extends Member<T>> dispose() {
+        try {
+            disposer.accept(value);
+            state.set(NOT_INITIALIZED_NOT_IN_USE);
+            return Mono.empty();
+        } catch (Throwable t) {
+            return Mono.error(new DisposerHoldException(t));
+        }
     }
 
     public void checkin() {
