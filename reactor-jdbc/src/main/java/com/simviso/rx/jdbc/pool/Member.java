@@ -3,10 +3,11 @@ package com.simviso.rx.jdbc.pool;
 import com.simviso.rx.jdbc.exception.DisposerHoldException;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
+import reactor.retry.Retry;
 
 import java.time.Duration;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -23,7 +24,8 @@ public class Member<T> {
     private static final int NOT_INITIALIZED_NOT_IN_USE = 0;
     private static final int INITIALIZED_IN_USE = 1;
     private static final int INITIALIZED_NOT_IN_USE = 2;
-    private final AtomicInteger state = new AtomicInteger(NOT_INITIALIZED_NOT_IN_USE);
+    private final AtomicReference<State> state = new AtomicReference<>(new State(NOT_INITIALIZED_NOT_IN_USE));
+
 
     private volatile T value;
     private final ReplayProcessor<Member<T>> processor;
@@ -31,6 +33,7 @@ public class Member<T> {
     private final long retryDelayMs;
     private final Predicate<T> healthy;
     private final Consumer<T> disposer;
+    //private final Scheduler.Worker worker;
 
 
     public Member(ReplayProcessor<Member<T>> replayProcessor, Callable<T> factory, long retryDelayMs, Predicate<T> healthy, Consumer<T> disposer) {
@@ -40,34 +43,46 @@ public class Member<T> {
         this.retryDelayMs = retryDelayMs;
         this.healthy = healthy;
         this.disposer = disposer;
+       // this.worker = Schedulers.parallel().createWorker();
     }
 
 
     public Mono<Member<T>> checkout() {
         return Mono.defer(() -> {
-            if (state.compareAndSet(NOT_INITIALIZED_NOT_IN_USE, INITIALIZED_IN_USE)) {
-                try {
-                    value = factory.call();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                return Mono.just(Member.this);
-            } else if (state.compareAndSet(INITIALIZED_NOT_IN_USE, INITIALIZED_IN_USE)) {
-                try {
-                    if (healthy.test(value)) {
 
+                State s = state.get();
+                if (s.value == NOT_INITIALIZED_NOT_IN_USE) {
+                    if (state.compareAndSet(s, new State(INITIALIZED_IN_USE))) {
+                        try {
+                            value = factory.call();
+                        } catch (Throwable e) {
+                            return dispose();
+                        }
                         return Mono.just(Member.this);
-                    } else {
+                    }
+                }
+                if (s.value == INITIALIZED_NOT_IN_USE) {
+                    if (state.compareAndSet(s, new State(INITIALIZED_IN_USE))) {
+                        try {
+                            if (healthy.test(value)) {
+                                return Mono.just(Member.this);
+                            } else {
+                                return dispose();
+                            }
+                        } catch (Throwable e) {
+                            return dispose();
+                        }
+                    }
+                }
+                if (s.value == INITIALIZED_IN_USE) {
+                    if (state.compareAndSet(s, new State(INITIALIZED_IN_USE))) {
                         return Mono.empty();
                     }
-                } catch (Throwable e) {
-                    return dispose();
                 }
-            } else {
-                return Mono.empty();
-            }
+            return Mono.empty();
 
-        }).retryWhen(e -> e.timeout(Duration.ofMillis(retryDelayMs)));
+        }).retryWhen(Retry.allBut(RuntimeException.class)
+                          .retryMax(1000).fixedBackoff(Duration.ofMillis(retryDelayMs)));
     }
 
     private Mono<? extends Member<T>> dispose() {
@@ -76,12 +91,14 @@ public class Member<T> {
         } catch (Throwable t) {
             return Mono.error(new DisposerHoldException(t));
         }
-        state.set(NOT_INITIALIZED_NOT_IN_USE);
+        state.set(new State(NOT_INITIALIZED_NOT_IN_USE));
+
+        //worker.schedule(() -> processor.onNext(Member.this), retryDelayMs, TimeUnit.MILLISECONDS);
         return Mono.empty();
     }
 
     public void checkin() {
-        state.set(INITIALIZED_NOT_IN_USE);
+        state.set(new State(INITIALIZED_NOT_IN_USE));
         processor.onNext(this);
     }
 
@@ -89,12 +106,24 @@ public class Member<T> {
         return value;
     }
 
+    private static final class State {
+        final int value;
+
+        State(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+    }
+
     @Override
     public String toString() {
         return "Member [value=" +
                 value +
                 ", state=" +
-                state.get() +
+                state.get().getValue() +
                 "]";
     }
 }
