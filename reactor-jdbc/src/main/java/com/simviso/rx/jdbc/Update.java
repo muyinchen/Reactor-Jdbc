@@ -17,11 +17,9 @@ import java.util.function.Function;
  * @email fei6751803@163.com
  * @time 2018/8/24 21:29.
  */
-public final class Update {
+public enum Update {
+    ;
 
-    private Update() {
-        //prevent instantiation
-    }
 
     public static Flux<Integer> create(Flux<Connection> connections, Flux<List<Object>> parameterGroups, String sql) {
 

@@ -19,7 +19,8 @@ import java.util.function.Function;
  * @email fei6751803@163.com
  * @time 2018/8/24 22:01.
  */
-public final class Select {
+public enum Select {
+    ;
    /* public static <T> Flux<T> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql,
                                      Function<? super ResultSet, T> mapper){
         Callable<ResultSet> initialState = () -> {
@@ -46,9 +47,7 @@ public final class Select {
         return Flux.generate(initialState,generator,disposeState);
     }*/
 
-    private Select() {
-        //prevent instantiation
-    }
+
 
     public static <T> Flux<T> create(Flux<Connection> connections,  Flux<List<Object>> parameters, String sql,
                                          Function<? super ResultSet, T> mapper) {
