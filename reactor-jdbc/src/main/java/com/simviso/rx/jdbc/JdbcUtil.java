@@ -7,14 +7,16 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author ZhiQiu
  * @email fei6751803@163.com
  * @time  2018/8/24 21:59.
  */
-public class JdbcUtil {
+public enum  JdbcUtil {
 
+    ;
     private static final Logger log = LoggerFactory.getLogger(JdbcUtil.class);
 
     public static void closeSilently(ResultSet rs) {
@@ -224,14 +226,53 @@ public class JdbcUtil {
         JdbcUtil.setParameters(ps, list, true);
     }
 
-    static void setParameters(PreparedStatement ps, List<Parameter> parameters, List<String> names)
+    static PreparedStatement setParameters(PreparedStatement ps, List<Object> parameters, List<String> names)
             throws SQLException {
+        List<Parameter> params = parameters.stream().map(o -> {
+            if (o instanceof Parameter) {
+                return (Parameter) o;
+            } else {
+                return new Parameter(o);
+            }
+        }).collect(Collectors.toList());
         if (names.isEmpty()) {
-            JdbcUtil.setParameters(ps, parameters, false);
+            JdbcUtil.setParameters(ps, params, false);
         } else {
-            JdbcUtil.setNamedParameters(ps, parameters, names);
+            JdbcUtil.setNamedParameters(ps, params, names);
+        }
+        return ps;
+    }
+
+    static void closeSilently(AutoCloseable c) {
+        try {
+            c.close();
+        } catch (Exception e) {
+            // ignore
         }
     }
+
+    static void closePreparedStatementAndConnection(PreparedStatement ps) {
+        Connection con = null;
+        try {
+            con = ps.getConnection();
+        } catch (SQLException ignored) {
+        }
+        closeSilently(ps);
+        if (con != null) {
+            closeSilently(con);
+        }
+    }
+
+    static NamedPreparedStatement prepare(Connection con, String sql) throws SQLException {
+        SqlWithNames s = SqlWithNames.parse(sql);
+        return new NamedPreparedStatement(con.prepareStatement(s.sql()), s.names());
+    }
+
+    static NamedPreparedStatement prepareReturnGeneratedKeys(Connection con, String sql) throws SQLException {
+        SqlWithNames s = SqlWithNames.parse(sql);
+        return new NamedPreparedStatement(con.prepareStatement(s.sql(), Statement.RETURN_GENERATED_KEYS), s.names());
+    }
+
     static PreparedStatement setParameters(PreparedStatement ps, List<Object> parameters) {
         //TODO
         return ps;
