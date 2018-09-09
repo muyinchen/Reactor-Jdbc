@@ -56,13 +56,7 @@ public enum Select {
 
             return rs;
         };
-        Consumer<ResultSet> disposeState = rs -> {
-            try {
-                rs.close();
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-        };
+        Consumer<ResultSet> disposeState = JdbcUtil::closeSilently;
         return Flux.generate(initialState, generator, disposeState);
     }
 

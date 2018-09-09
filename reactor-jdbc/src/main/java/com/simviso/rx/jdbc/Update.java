@@ -74,13 +74,7 @@ public enum Update {
             }
             return rs;
         };
-        Consumer<ResultSet> disposer =  rs -> {
-            try {
-                rs.close();
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-        };
+        Consumer<ResultSet> disposer = JdbcUtil::closeSilently;
         return Flux.generate(initialState, generator, disposer);
     }
 }
