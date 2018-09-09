@@ -21,32 +21,6 @@ import java.util.function.Function;
  */
 public enum Select {
     ;
-   /* public static <T> Flux<T> create(Callable<Connection> connectionFactory, List<Object> parameters, String sql,
-                                     Function<? super ResultSet, T> mapper){
-        Callable<ResultSet> initialState = () -> {
-            Connection con = connectionFactory.call();
-            PreparedStatement ps = con.prepareStatement(sql);
-            return ps.executeQuery();
-        };
-        BiFunction<ResultSet, SynchronousSink<T>,ResultSet> generator = (rs, sink) ->
-        {
-            try {
-                if (rs.next()) {
-                    sink.next(mapper.apply(rs));
-                } else {
-                    sink.complete();
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-
-            return rs;
-        };
-
-        Consumer<ResultSet> disposeState = JdbcUtil::closeSilently;
-        return Flux.generate(initialState,generator,disposeState);
-    }*/
-
 
 
     public static <T> Flux<T> create(Flux<Connection> connections,  Flux<List<Object>> parameters, String sql,
@@ -57,22 +31,16 @@ public enum Select {
 
     private static <T> Flux<T> create(Connection con, String sql, Flux<List<Object>> parameterGroups,
                                           Function<? super ResultSet, T> mapper) {
-        Callable<PreparedStatement> initialState = () -> con.prepareStatement(sql);
-        Function<PreparedStatement, Flux<T>> observableFactory = ps -> parameterGroups
-                .flatMapDelayError(parameters -> create(con, ps, parameters, mapper), 1,Queues.XS_BUFFER_SIZE);
-        Consumer<PreparedStatement> disposer = ps -> {
-            try {
-                ps.close();
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-        };
-        return Flux.using(initialState, observableFactory, disposer, true);
+        Callable<NamedPreparedStatement> initialState = () -> JdbcUtil.prepare(con,sql);
+        Function<NamedPreparedStatement, Flux<T>> fluxFactory = ps -> parameterGroups
+                .flatMapDelayError(parameters -> create(con, ps.ps, parameters, mapper,ps.names), 1,Queues.XS_BUFFER_SIZE);
+        Consumer<NamedPreparedStatement> disposer = ps -> JdbcUtil.closePreparedStatementAndConnection(ps.ps);
+        return Flux.using(initialState, fluxFactory, disposer, true);
     }
 
     private static <T> Flux<? extends T> create(Connection con, PreparedStatement ps, List<Object> parameters,
-                                                    Function<? super ResultSet, T> mapper) {
-        Callable<ResultSet> initialState = () -> JdbcUtil.setParameters(ps, parameters)
+                                                    Function<? super ResultSet, T> mapper , List<String> names) {
+        Callable<ResultSet> initialState = () -> JdbcUtil.setParameters(ps, parameters, names)
                                                          .getResultSet();
         BiFunction<ResultSet, SynchronousSink<T>,ResultSet> generator = (rs, sink) ->
         {
