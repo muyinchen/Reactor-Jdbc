@@ -273,8 +273,5 @@ public enum  JdbcUtil {
         return new NamedPreparedStatement(con.prepareStatement(s.sql(), Statement.RETURN_GENERATED_KEYS), s.names());
     }
 
-    static PreparedStatement setParameters(PreparedStatement ps, List<Object> parameters) {
-        //TODO
-        return ps;
-    }
+
 }
