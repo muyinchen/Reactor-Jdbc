@@ -12,10 +12,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PoolTest {
 
     @Test
-    public void test() throws InterruptedException {
+    public void test() {
         AtomicInteger count = new AtomicInteger();
-        Pool<Integer> pool = new Pool<>(count::incrementAndGet, n -> true, n -> {
-        }, 5, 1000);
+        MemberFactory<Integer, NonBlockingPool<Integer>> memberFactory = NonBlockingMember::new;
+        Pool<Integer> pool = new NonBlockingPool<>(count::incrementAndGet, n -> true,
+                n -> {
+                }, 3, 1000, memberFactory);
         pool.members().toStream().forEach(System.out::println);
     }
 }
