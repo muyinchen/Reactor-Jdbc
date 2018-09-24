@@ -4,7 +4,6 @@ import com.simviso.rx.jdbc.exception.DisposerHoldException;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
 import reactor.retry.Retry;
 
 import java.time.Duration;
@@ -36,7 +35,7 @@ public class NonBlockingMember<T> implements Member<T> {
 
     public NonBlockingMember(NonBlockingPool<T> pool) {
         this.pool = pool;
-        this.worker = Schedulers.parallel().createWorker();
+        this.worker = pool.scheduler.createWorker();
         this.processor = ReplayProcessor.create();
     }
 

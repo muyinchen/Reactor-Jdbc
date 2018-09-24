@@ -1,5 +1,6 @@
 package com.simviso.rx.jdbc;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Types;
 
@@ -8,7 +9,14 @@ import java.sql.Types;
  * @email: fei6751803@163.com
  * @date: 2018/9/8 22:28.
  */
-public class Database {
+public class Database implements AutoCloseable {
+
+    private final ConnectionProvider cp;
+
+    public Database(ConnectionProvider cp) {
+        this.cp = cp;
+    }
+
     public static final Object NULL_CLOB = new Object();
 
     public static final Object NULL_NUMBER = new Object();
@@ -36,4 +44,26 @@ public class Database {
             return bytes;
     }
 
+    public static Database from(ConnectionProvider cp) {
+        return new Database(cp);
+    }
+
+    public static Database from(Connection con) {
+        return new Database(new ConnectionProvider() {
+
+            @Override
+            public Connection get() {
+                return con;
+            }
+
+            @Override
+            public void close() {
+                JdbcUtil.closeSilently(con);
+            }
+        });
+    }
+    @Override
+    public void close() throws Exception {
+        cp.close();
+    }
 }

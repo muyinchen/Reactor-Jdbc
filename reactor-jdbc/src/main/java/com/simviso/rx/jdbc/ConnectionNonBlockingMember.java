@@ -19,7 +19,7 @@ public class ConnectionNonBlockingMember implements Connection, Member<Connectio
     private final Member<Connection> member;
 
     public ConnectionNonBlockingMember(NonBlockingPool<Connection> pool) {
-        member = new NonBlockingMember<Connection>(pool);
+        member = new NonBlockingMember<>(pool);
     }
 
     private Connection con() {
@@ -306,7 +306,7 @@ public class ConnectionNonBlockingMember implements Connection, Member<Connectio
     }
 
     @Override
-    public Mono<Member<Connection>> checkout() {
+    public Mono<? extends Member<Connection>> checkout() {
         return member.checkout();
     }
 

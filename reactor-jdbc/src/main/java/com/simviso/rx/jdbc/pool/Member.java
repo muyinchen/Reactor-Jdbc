@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
  * @date: 2018/9/20 13:45.
  */
 public interface Member<T> {
-    Mono<Member<T>> checkout();
+    Mono<? extends Member<T>> checkout();
 
     void checkin();
 

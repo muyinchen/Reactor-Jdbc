@@ -2,6 +2,7 @@ package com.simviso.rx.jdbc.pool;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.ReplayProcessor;
+import reactor.core.scheduler.Scheduler;
 import reactor.util.concurrent.Queues;
 
 import java.util.concurrent.Callable;
@@ -34,15 +35,17 @@ public class NonBlockingPool<T> implements Pool<T>{
     final int maxSize;
     final long retryDelayMs;
     final MemberFactory<T, NonBlockingPool<T>> memberFactory;
+    final Scheduler scheduler;
 
     public NonBlockingPool(Callable<T> factory, Predicate<T> healthy, Consumer<T> disposer, int maxSize, long retryDelayMs,
-                           MemberFactory<T, NonBlockingPool<T>> memberFactory) {
+                           MemberFactory<T, NonBlockingPool<T>> memberFactory, Scheduler scheduler) {
         this.factory = factory;
         this.healthy = healthy;
         this.disposer = disposer;
         this.maxSize = maxSize;
         this.retryDelayMs = retryDelayMs;
         this.memberFactory = memberFactory;
+        this.scheduler = scheduler;
 
         this.processor = ReplayProcessor.create();
 
@@ -51,9 +54,9 @@ public class NonBlockingPool<T> implements Pool<T>{
             .subscribe(processor);
         //When the element is issued, the status in this element is set to used.
         //元素下发的时候将此元素内的状态设定为已使用
-        this.members = processor.doOnNext(m -> System.out.println("To be checked: " + m))
-                                .flatMapDelayError(Member::checkout,1,Queues.XS_BUFFER_SIZE)
-                                .doOnNext(m -> System.out.println("checked out: " + m));
+        this.members = (Flux<Member<T>>) processor.doOnNext(m -> System.out.println("To be checked: " + m))
+                                                  .flatMapDelayError(Member::checkout,1,Queues.XS_BUFFER_SIZE)
+                                                  .doOnNext(m -> System.out.println("checked out: " + m));
     }
 
     public Flux<Member<T>> members() {
