@@ -1,8 +1,11 @@
 package com.simviso.rx.jdbc.pool;
 
+
+import com.google.common.base.Preconditions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.ReplayProcessor;
 import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.concurrent.Queues;
 
 import java.util.concurrent.Callable;
@@ -39,6 +42,14 @@ public class NonBlockingPool<T> implements Pool<T>{
 
     public NonBlockingPool(Callable<T> factory, Predicate<T> healthy, Consumer<T> disposer, int maxSize, long retryDelayMs,
                            MemberFactory<T, NonBlockingPool<T>> memberFactory, Scheduler scheduler) {
+        Preconditions.checkNotNull(factory);
+        Preconditions.checkNotNull(healthy);
+        Preconditions.checkNotNull(disposer);
+        Preconditions.checkArgument(maxSize > 0);
+        Preconditions.checkArgument(retryDelayMs >= 0);
+        Preconditions.checkNotNull(memberFactory);
+        Preconditions.checkNotNull(scheduler);
+
         this.factory = factory;
         this.healthy = healthy;
         this.disposer = disposer;
@@ -68,5 +79,67 @@ public class NonBlockingPool<T> implements Pool<T>{
         // TODO
     }
 
+
+    public static <T> Builder<T> builder() {
+        return new Builder<>();
+    }
+
+    public static <T> Builder<T> factory(Callable<T> factory) {
+        return new Builder<T>().factory(factory);
+    }
+
+    public static class Builder<T> {
+
+        private Callable<T> factory;
+        private Predicate<T> healthy = x -> true;
+        private Consumer<T> disposer;
+        private int maxSize = 10;
+        private long retryDelayMs = 30000;
+        private MemberFactory<T, NonBlockingPool<T>> memberFactory;
+        private Scheduler scheduler = Schedulers.parallel();
+
+        private Builder() {
+        }
+
+        public Builder<T> factory(Callable<T> factory) {
+            this.factory = factory;
+            return this;
+        }
+
+        public Builder<T> healthy(Predicate<T> healthy) {
+            this.healthy = healthy;
+            return this;
+        }
+
+        public Builder<T> disposer(Consumer<T> disposer) {
+            this.disposer = disposer;
+            return this;
+        }
+
+        public Builder<T> maxSize(int maxSize) {
+            this.maxSize = maxSize;
+            return this;
+        }
+
+        public Builder<T> retryDelayMs(long retryDelayMs) {
+            this.retryDelayMs = retryDelayMs;
+            return this;
+        }
+
+        public Builder<T> memberFactory(MemberFactory<T, NonBlockingPool<T>> memberFactory) {
+            this.memberFactory = memberFactory;
+            return this;
+        }
+
+        public Builder<T> scheduler(Scheduler scheduler) {
+            this.scheduler = scheduler;
+            return this;
+        }
+
+        public NonBlockingPool<T> build() {
+            return new NonBlockingPool<T>(factory, healthy, disposer, maxSize, retryDelayMs,
+                    memberFactory, scheduler);
+        }
+    }
 
 }

@@ -28,6 +28,11 @@
             <version>${slf4j.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>25.1-jre</version>
+        </dependency>
 
         <!-- Test Dependencies -->
         <dependency>
